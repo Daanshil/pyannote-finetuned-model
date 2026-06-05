@@ -37,7 +37,7 @@ The table below tracks the Jaccard Error Rate (%) under identical evaluation set
 
 ---
 
-## 2. Impact of Training Segment Duration (Ablation Study)
+## 2. Impact of Training Segment Duration 
 
 
 | Experiment (Duration) | Test Set DER (%) | Test Set JER (%) | Development Set DER (%) | Development Set JER (%) |
