@@ -148,6 +148,7 @@ standard-sunau==3.13.0
 sympy==1.14.0
 tensorboard==2.20.0
 tensorboard-data-server==0.7.2
+TextGrid==1.6.1
 threadpoolctl==3.6.0
 torch==2.11.0
 torch-audiomentations==0.12.0
