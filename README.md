@@ -15,6 +15,7 @@ This repository is dedicated to fine-tuning the `segmentation-3.0` model from Py
   - [Parameter Guide](#parameter-guide)
     - [General Parameters](#general-parameters)
     - [Training-Specific Parameters](#training-specific-parameters)
+    - [Scoring-Specific Parameters](#scoring-specific-parameters)
     - [Baseline Scoring](#baseline-scoring)
     - [Training](#training)
     - [Evaluation](#evaluation)
@@ -23,9 +24,6 @@ This repository is dedicated to fine-tuning the `segmentation-3.0` model from Py
     - [2. Multi Baseline Scoring](#2-multi-baseline-scoring)
     - [3. Multi Training](#3-multi-training)
     - [4. Multi Fine-Tuned Evaluation](#4-multi-fine-tuned-evaluation)
-  - [Automation via Run Scripts](#automation-via-run-scripts)
-    - [Execution and Telemetry Logging](#execution-and-telemetry-logging)
-    - [Telemetry Pipeline Output](#telemetry-pipeline-output)
   - [Project Structure](#project-structure)
   - [Notes](#notes)
 
@@ -177,6 +175,15 @@ This guide details the most common command-line parameters used across scripts. 
 
 
 
+### Scoring-Specific Parameters
+
+* `--collar`: Collar in seconds applied around reference boundaries to forgive near-miss detections, used by all scoring scripts (default: `0.0`).
+
+
+* `--min_duration`: Segmentation `min_duration_off` value used by `scoring/score_model.py` to merge short gaps between segments (default: `0.0`).
+
+
+
 ---
 
 ### Baseline Scoring
@@ -198,6 +205,7 @@ python scoring/score_default.py \
   --set test \
   --output-dir /absolute/path/to/output \
   --protocol-name Babaloon.SpeakerDiarization.CustomProtocol \
+  --collar 0.0 \
   --use-cuda
 
 ```
@@ -215,7 +223,7 @@ python training/train.py \
   --protocol-name protocol.SpeakerDiarization.CustomProtocol \
   --duration 5.0 \
   --batch-size 32 \
-  --lr 1e-4 \
+  --lr 1e-3 \
   --log-dir /absolute/path/to/logs/up_model_test \
   --patience 10 \
   --num-workers 4 \
@@ -237,12 +245,18 @@ python scoring/score_model.py \
   --model-path /absolute/path/to/logs/up_model_test/checkpoint.ckpt \
   --exp-label finetuned_evaluation \
   --set test \
+  --collar 0.0 \
+  --min_duration 0.0 \
   --use-cuda
 
 ```
 Note: Cross Evaluation
 
-To evalate a model of one protocol onto anotherm and its correcponfing test or dev set. Simply change the protocol name, set and config. It will run the model on that protocol.  
+To evaluate a model of one protocol onto another and its corresponding test or dev set. Simply change the protocol name, set and config. It will run the model on that protocol.  
+
+> [!NOTE]
+> `scoring/score_model.py` instantiates the clustering step with `min_cluster_size=20` and `threshold=0.8` (retuned from the original `15` / `0.715` defaults for child speech). Adjust these directly in the script if you need different clustering behaviour.
+
 
 ---
 
@@ -257,13 +271,13 @@ Ensure your dataset components are loaded and correctly verified across the fuse
 ```bash
 python setup/multi_setup.py \
   --config /absolute/path/to/multi.yml \
-  --protocols Babaloon.SpeakerDiarization.CustomProtocol up_child.SpeakerDiarization.CustomProtocol
+  --protocols protocol_1.SpeakerDiarization.CustomProtocol protocol_2.SpeakerDiarization.CustomProtocol
 
 ```
 
 ### 2. Multi Baseline Scoring
 
-Evaluate performance benchmarks simultaneously across the combined pipeline:
+Evaluate performance benchmarks simultaneously across the combined pipeline. This gives you the baseline across both sets.
 
 ```bash
 python scoring/score_default_multi.py \
@@ -272,7 +286,7 @@ python scoring/score_default_multi.py \
   --exp-label multi_baseline_benchmark \
   --set test \
   --output-dir /absolute/path/to/output \
-  --protocols Babaloon.SpeakerDiarization.CustomProtocol up_child.SpeakerDiarization.CustomProtocol \
+  --protocols protocol_1.SpeakerDiarization.CustomProtocol protocol_2.SpeakerDiarization.CustomProtocol \
   --use-cuda
 
 ```
@@ -293,7 +307,7 @@ python training/multi_train.py \
   --patience 10 \
   --epochs 20 \
   --num-workers 4 \
-  --protocols Babaloon.SpeakerDiarization.CustomProtocol up_child.SpeakerDiarization.CustomProtocol \
+  --protocols protocol_1.SpeakerDiarization.CustomProtocol protocol_2.SpeakerDiarization.CustomProtocol \
   --use-cuda
 
 ```
@@ -310,43 +324,10 @@ python scoring/score_model_multi.py \
   --exp-label multi_finetuned_eval \
   --set test \
   --output-dir /absolute/path/to/output \
-  --protocols Babaloon.SpeakerDiarization.CustomProtocol up_child.SpeakerDiarization.CustomProtocol \
+  --protocols protocol_1.SpeakerDiarization.CustomProtocol protocol_2.SpeakerDiarization.CustomProtocol \
   --use-cuda
 
 ```
-
----
-
-## Automation via Run Scripts
-
-For seamless end-to-end processing execution, shell automation scripts are provided in the repository root directory.
-
-* **`run.sh`**: Targets single-protocol development pipelines.
-
-
-* **`run_multi.sh`**: Targets multi-protocol combined workflows.
-
-
-
-Both automation environments parse input configurations and move dynamically through the following step phases sequentially:
-
-
-### Execution and Telemetry Logging
-
-To run an automated workflow, configure the internal variables at the head of the respective file and invoke it directly from your terminal terminal:
-
-```bash
-bash run.sh
-```
-
-### Telemetry Pipeline Output
-
-Every run creates an export runtime folder containing logs and metrics. A central pipeline log dashboard file is compiled directly during execution:
-
-* Single setup tracking outputs save to: `output/{EXP_LABEL}/pipeline.log`
-
-* Multi-protocol combined setups save to: `output/{EXP_LABEL}/pipeline_multi.log`
-
 
 ---
 
