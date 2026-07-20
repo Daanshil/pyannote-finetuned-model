@@ -55,6 +55,8 @@ def main():
     parser.add_argument("--set", type=str, choices=["train", "development", "test"], default="test", help="Split to evaluate")
     parser.add_argument("--use-cuda", action="store_true", help="Use CUDA if available")
     parser.add_argument("--output-dir", type=str, default="output", help="Root directory for saving evaluation results")
+    parser.add_argument("--collar",type=float, default=0.0,help="Collar (seconds) applied around reference boundaries to forgive near-miss detections (default: 0.0)")
+
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
@@ -142,10 +144,10 @@ def main():
 
     # 6. Initialize Multi-Metric Trackers
     metrics = {
-        "Diarization Error Rate (DER)": DiarizationErrorRate(),
-        "Jaccard Error Rate (JER)": JaccardErrorRate(),
-        "Diarization Purity": DiarizationPurity(),
-        "Diarization Coverage": DiarizationCoverage()
+        "Diarization Error Rate (DER)": DiarizationErrorRate(collar=args.collar),
+        "Jaccard Error Rate (JER)": JaccardErrorRate(collar=args.collar),
+        "Diarization Purity": DiarizationPurity(collar=args.collar),
+        "Diarization Coverage": DiarizationCoverage(collar=args.collar)
     }
 
     # 7. Process & Evaluate

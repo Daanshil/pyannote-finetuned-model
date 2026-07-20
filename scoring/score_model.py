@@ -31,6 +31,9 @@ def main():
     parser.add_argument("--protocol-name", type=str, default="up_child.SpeakerDiarization.CustomProtocol", help="Database protocol name")
     parser.add_argument("--use-cuda", action="store_true", help="Use CUDA if available")
     parser.add_argument("--output-dir", type=str, default="output", help="Root directory for saving evaluation results")
+    parser.add_argument("--collar",type=float, default=0.0,help="Collar (seconds) applied around reference boundaries to forgive near-miss detections (default: 0.0)")
+    parser.add_argument("--min_duration",type=float, default=0.0,help="Min duration off parameter to merge segments")
+
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
@@ -43,7 +46,7 @@ def main():
     split_dir.mkdir(parents=True, exist_ok=True)
 
     seg_threshold = 0.0
-    min_duration_off = 0.0
+    min_duration_off = args.min_duration
 
     print(f"Loaded parameters -> threshold: {seg_threshold:.4f}, min_duration_off: {min_duration_off:.4f}")
 
@@ -93,8 +96,8 @@ def main():
     finetuned_pipeline.instantiate({
         "clustering": {
             "method": "centroid",
-            "min_cluster_size": 15,
-            "threshold": 0.715,
+            "min_cluster_size": 20,
+            "threshold": 0.8,
         },
     })
     finetuned_pipeline.to(device)
@@ -108,11 +111,13 @@ def main():
         return
 
     # 6. Initialize Multi-Metric Trackers
+
+    print(f"Collar applied: {args.collar}")
     metrics = {
-        "Diarization Error Rate (DER)": DiarizationErrorRate(),
-        "Jaccard Error Rate (JER)": JaccardErrorRate(),
-        "Diarization Purity": DiarizationPurity(),
-        "Diarization Coverage": DiarizationCoverage()
+        "Diarization Error Rate (DER)": DiarizationErrorRate(collar=args.collar, skip_overlap=False),
+        "Jaccard Error Rate (JER)": JaccardErrorRate(collar=args.collar),
+        "Diarization Purity": DiarizationPurity(collar=args.collar),
+        "Diarization Coverage": DiarizationCoverage(collar=args.collar)
     }
 
     # 7. Process & Evaluate
