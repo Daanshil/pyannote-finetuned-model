@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 import torch
 from lightning.pytorch import seed_everything
+import types
 
 from pyannote.database import registry, FileFinder
 from pyannote.database.protocol import SpeakerDiarizationProtocol  # <-- Added the proper base class
@@ -13,6 +14,7 @@ from pyannote.core import Segment, Timeline
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping, TQDMProgressBar, LearningRateMonitor
 from lightning.pytorch.loggers import TensorBoardLogger
+from torch.optim import Adam
 
 # Fix: Inherit from SpeakerDiarizationProtocol instead of SpeakerDiarization task
 class CombinedProtocol(SpeakerDiarizationProtocol):
@@ -167,6 +169,12 @@ def main():
     )
 
     print(f"\nStarting training for multi-dataset experiment: {args.exp_label}...")
+    def configure_optimizers(self):
+        return Adam(self.parameters(), lr=args.lr)
+    model.configure_optimizers = types.MethodType(configure_optimizers, model)
+    opt = model.configure_optimizers()
+    print(opt)
+
     trainer.fit(model)
 
     print(f"\nTraining Complete!")

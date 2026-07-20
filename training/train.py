@@ -2,6 +2,7 @@ import os
 import argparse
 from pathlib import Path
 import torch
+import types
 
 from pyannote.database import FileFinder, registry
 from pyannote.audio import Model
@@ -13,6 +14,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping, TQDMProg
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.utilities.model_summary import ModelSummary
 from lightning.pytorch import seed_everything
+from torch.optim import Adam
 
 def get_annotated(file):
     # 1. Get the 'extent' (the start and end of all annotations)
@@ -131,8 +133,18 @@ def main():
         logger=logger,
         gradient_clip_val=0.5,
     )
+    def configure_optimizers(self):
+        return Adam(self.parameters(), lr=args.lr)
 
     print(f"\nStarting training for experiment: {args.exp_label}...")
+    opt = model.configure_optimizers()
+    print(opt)
+    optimizer = opt[0][0] if isinstance(opt, tuple) else opt
+    print(type(optimizer).__name__)
+    print(optimizer.defaults)  # lr, betas, eps, weight_decay, etc.
+
+    
+    
     trainer.fit(model)
 
     print(f"\nTraining Complete!")
