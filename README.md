@@ -2,9 +2,39 @@
 
 This repository is dedicated to fine-tuning the `segmentation-3.0` model from Pyannote specifically for Afrikaans child speech.
 
+HF pipeline and model available at: [daanshil/pyannote-seg-afr-childspeech-ft](https://huggingface.co/daanshil/pyannote-seg-afr-childspeech-ft)
+
+## To use the HF pipeline:
+
+Install `pyannote.audio`, accept the terms for the base models on Hugging Face, then load the pipeline with your access token:
+
+```python
+from pyannote.audio import Pipeline
+
+pipeline = Pipeline.from_pretrained(
+    "daanshil/pyannote-seg-afr-childspeech-ft",
+    token="hf_your_token_here",
+)
+
+# optional: run on GPU
+# import torch; pipeline.to(torch.device("cuda"))
+
+output = pipeline("audio.wav")
+diarization = output.speaker_diarization  # pyannote.audio 4.x returns a wrapper object
+
+for turn, _, speaker in diarization.itertracks(yield_label=True):
+    print(f"{turn.start:.1f}s - {turn.end:.1f}s: {speaker}")
+
+# save as RTTM
+with open("audio.rttm", "w") as f:
+    diarization.write_rttm(f)
+```
+
+
 ## Table of Contents
 
 - [Pyannote Fine-Tuned Model](#pyannote-fine-tuned-model)
+  - [To use the HF pipeline:](#to-use-the-hf-pipeline)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Setup](#setup)
